@@ -203,13 +203,42 @@ with tab_habits:
                 st.markdown(f"<div style='background:{ACCENT2 if active else BORDER}; height:30px; width:100%; border-radius:4px; margin-bottom:5px; border:1px solid {BORDER}'></div>", unsafe_allow_html=True)
         st.caption("Active days are highlighted in green.")
 
-# ── FOOTER SECTION ──
-st.write("---")
+# ── PROFESSIONAL ID FOOTER ──
 st.markdown(
     f"""
-    <div style="text-align: center; color: {SUBTEXT}; padding: 20px;">
-        Made with ❤️ by <b style="color: {ACCENT};">Wasif</b>
+    <style>
+    .footer-container {{
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: {CARD};
+        color: {TEXT};
+        text-align: center;
+        padding: 5px;
+        border-top: 1px solid {BORDER};
+        font-size: 14px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        z-index: 1000;
+    }}
+    .id-badge {{
+        background-color: {ACCENT};
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: bold;
+    }}
+    </style>
+    <div class="footer-container">
+        <span>💻 <b>Life OS</b></span>
+        <span class="id-badge">ID: WASIF-2026</span>
+        <span style="color:{SUBTEXT};">|</span>
+        <span>Made by <b>Wasif Sadheer</b></span>
     </div>
-    """, 
+    """,
     unsafe_allow_html=True
 )
