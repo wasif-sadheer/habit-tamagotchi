@@ -202,3 +202,14 @@ with tab_habits:
             with h_cols[i % 7]:
                 st.markdown(f"<div style='background:{ACCENT2 if active else BORDER}; height:30px; width:100%; border-radius:4px; margin-bottom:5px; border:1px solid {BORDER}'></div>", unsafe_allow_html=True)
         st.caption("Active days are highlighted in green.")
+
+# ── FOOTER SECTION ──
+st.write("---")
+st.markdown(
+    f"""
+    <div style="text-align: center; color: {SUBTEXT}; padding: 20px;">
+        Made with ❤️ by <b style="color: {ACCENT};">Wasif</b>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
