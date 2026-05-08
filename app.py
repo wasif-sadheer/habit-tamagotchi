@@ -1,188 +1,122 @@
 import streamlit as st
 import json
 import os
+import time
 from datetime import date, timedelta
 
-# ── PALETTE (EXACT FROM habit_tamagotchi.py) ──
+# ── PALETTE (EXACT FROM ORIGINAL) ──
 #
-BG          = "#0f1117"
-CARD        = "#1a1d27"
-CARD2       = "#21253a"
-ACCENT      = "#7c6af7"
-ACCENT2     = "#56c596"
-DANGER      = "#ff6b6b"
-TEXT        = "#e8eaf0"
-SUBTEXT     = "#7b7f96"
-BORDER      = "#2a2d3e"
+BG, CARD, CARD2, ACCENT, ACCENT2, TEXT, SUBTEXT, BORDER = (
+    "#0f1117", "#1a1d27", "#21253a", "#7c6af7", "#56c596", "#e8eaf0", "#7b7f96", "#2a2d3e"
+)
 
-st.set_page_config(page_title="Habit Tamagotchi", layout="centered")
+st.set_page_config(page_title="Habit Tamagotchi Pro", layout="wide")
 
-# ── CUSTOM CSS (TO MATCH PYQT UI) ──
-#
+# ── PROFESSIONAL STYLING ──
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {BG}; color: {TEXT}; }}
-    [data-testid="stHeader"] {{ background: rgba(0,0,0,0); }}
-    
-    .creature-card {{
-        background-color: {CARD};
-        border: 1px solid {BORDER};
-        border-radius: 22px;
-        padding: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }}
-    .stat-pill {{
-        background-color: {CARD2};
-        border-radius: 14px;
-        padding: 10px;
-        border: 1px solid {BORDER};
-        margin-bottom: 8px;
-    }}
-    .habit-row {{
-        background-color: {CARD};
-        border: 1px solid {BORDER};
-        border-radius: 14px;
-        padding: 15px;
-        margin-bottom: 10px;
-    }}
-    .badge {{
-        background: linear-gradient(90deg, {ACCENT}, {ACCENT2});
-        color: white;
-        padding: 2px 12px;
-        border-radius: 11px;
-        font-size: 12px;
-        font-weight: bold;
-    }}
+    .main-card {{ background:{CARD}; border:1px solid {BORDER}; border-radius:20px; padding:20px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }}
+    .stat-pill {{ background:{CARD2}; border-radius:12px; padding:10px; border:1px solid {BORDER}; text-align:center; }}
+    .badge {{ background: linear-gradient(90deg, {ACCENT}, {ACCENT2}); color:white; padding:3px 12px; border-radius:10px; font-weight:bold; font-size:12px; }}
     </style>
     """, unsafe_allow_html=True)
 
-# ── LOGIC (EXACT FROM habit_tamagotchi.py) ──
-DATA_FILE = "habit_data.json"
+# ── LOGIC & DATA ──
+DATA_FILE = "habit_pro_data.json"
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE) as f:
-            return json.load(f)
-    return {"habits": [], "completions": {}, "creature_xp": 0}
+        with open(DATA_FILE) as f: return json.load(f)
+    return {"habits": [], "completions": {}, "creature_xp": 0, "focus_time": 0}
 
 def save_data(d):
-    with open(DATA_FILE, "w") as f:
-        json.dump(d, f, indent=2)
+    with open(DATA_FILE, "w") as f: json.dump(d, f, indent=2)
 
 def get_stage(xp):
     #
-    STAGES = [
-        {"name": "Egg",       "min_xp": 0,   "emoji": "🥚"},
-        {"name": "Hatchling", "min_xp": 10,  "emoji": "🐣"},
-        {"name": "Sprout",    "min_xp": 30,  "emoji": "🌱"},
-        {"name": "Buddy",     "min_xp": 60,  "emoji": "🐶"},
-        {"name": "Champion",  "min_xp": 100, "emoji": "🏆"},
-    ]
-    current = STAGES[0]
-    for s in STAGES:
-        if xp >= s["min_xp"]: current = s
-    return current
+    if xp >= 100: return "Champion", "🏆"
+    if xp >= 60: return "Buddy", "🐶"
+    if xp >= 30: return "Sprout", "🌱"
+    if xp >= 10: return "Hatchling", "🐣"
+    return "Egg", "🥚"
 
-def calc_streak(data):
-    #
-    habits = data["habits"]
-    if not habits: return 0
-    streak = 0
-    d = date.today()
-    while True:
-        done = data["completions"].get(str(d), [])
-        if all(h in done for h in habits):
-            streak += 1
-            d -= timedelta(days=1)
-        else: break
-    return streak
-
-# --- State Management ---
-if 'data' not in st.session_state:
-    st.session_state.data = load_data()
-
+if 'data' not in st.session_state: st.session_state.data = load_data()
 data = st.session_state.data
 today_str = str(date.today())
 
-# ── UI HEADER ──
-st.title("Habit Tamagotchi")
-st.caption(f"📅 {today_str}")
-
-# ── CREATURE SECTION (Matching CreatureWidget & Stats) ──
-#
-with st.container():
-    st.markdown('<div class="creature-card">', unsafe_allow_html=True)
+# ── SIDEBAR (POWER FEATURES) ──
+with st.sidebar:
+    st.title("⚡ Power Tools")
     
-    stage = get_stage(data["creature_xp"])
-    col_img, col_stats = st.columns([1, 1.5])
-    
-    with col_img:
-        st.markdown(f"<h1 style='font-size: 100px; text-align: center; margin: 0;'>{stage['emoji']}</h1>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: center;'><span class='badge'>{stage['name']}</span></div>", unsafe_allow_html=True)
+    # 1. POMODORO TIMER (Powerful Task)
+    st.subheader("⏱️ Focus Timer")
+    minutes = st.number_input("Minutes", 1, 60, 25)
+    if st.button("Start Deep Work"):
+        placeholder = st.empty()
+        for i in range(minutes * 60, 0, -1):
+            placeholder.metric("Time Remaining", f"{i//60:02d}:{i%60:02d}")
+            time.sleep(1)
+        st.balloons()
+        data["creature_xp"] += 5 # Deep work gives more XP!
+        save_data(data)
+        st.success("Focus Session Complete! +5 XP")
 
-    with col_stats:
-        xp = data["creature_xp"]
-        st.write(f"**XP:** {xp}")
-        st.progress(min(xp / 100, 1.0))
-        
-        # Stat Pills
-        done_count = len(data["completions"].get(today_str, []))
-        total_count = len(data["habits"])
-        streak = calc_streak(data)
-        
-        s1, s2 = st.columns(2)
-        with s1:
-            st.markdown(f"<div class='stat-pill'><small style='color:{SUBTEXT}'>🔥 STREAK</small><br><b>{streak} Days</b></div>", unsafe_allow_html=True)
-        with s2:
-            st.markdown(f"<div class='stat-pill'><small style='color:{SUBTEXT}'>✅ TODAY</small><br><b>{done_count}/{total_count}</b></div>", unsafe_allow_html=True)
-            
+# ── MAIN UI ──
+col_main, col_stats = st.columns([2, 1])
+
+with col_main:
+    st.title("Habit Tamagotchi Pro")
+    st.caption(f"Status: Deep Work Mode Active | {today_str}")
+
+    # 2. MULTITASKING MATRIX (Powerful Task)
+    st.markdown('<div class="main-card">', unsafe_allow_html=True)
+    c1, c2 = st.columns([1, 2])
+    stage_name, emoji = get_stage(data["creature_xp"])
+    with c1:
+        st.markdown(f"<h1 style='font-size:120px; margin:0;'>{emoji}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<span class='badge'>{stage_name}</span>", unsafe_allow_html=True)
+    with c2:
+        st.write(f"**Total XP:** {data['creature_xp']}")
+        st.progress(min(data["creature_xp"] / 100, 1.0))
+        st.write("Keep working to evolve your pet! Each habit gives **+2 XP**, Deep Work gives **+5 XP**.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.write("") # Spacer
-
-# ── ADD HABIT ──
-#
-c_in, c_btn = st.columns([4, 1])
-with c_in:
-    new_h = st.text_input("", placeholder="＋ Add a new habit...", label_visibility="collapsed")
-with c_btn:
-    if st.button("Add", use_container_width=True) and new_h:
-        if new_h not in data["habits"]:
-            data["habits"].append(new_h)
-            save_data(data)
-            st.rerun()
-
-st.markdown(f"<p style='color: {SUBTEXT}; font-size: 11px; font-weight: bold; letter-spacing: 1.5px;'>TODAY'S HABITS</p>", unsafe_allow_html=True)
-
-# ── HABIT LIST (Matching HabitRow) ──
-#
-completions = data["completions"].get(today_str, [])
-
-for h in data["habits"]:
-    is_done = h in completions
+    st.write("")
     
-    # Custom container for the row
-    col_check, col_del = st.columns([5, 1])
-    
-    with col_check:
-        # Checkbox handles XP (+2 per habit)
-        if st.checkbox(h, value=is_done, key=f"cb_{h}"):
-            if h not in completions:
-                data["completions"].setdefault(today_str, []).append(h)
-                data["creature_xp"] += 2
-                save_data(data)
-                st.rerun()
-        else:
-            if h in completions:
-                data["completions"][today_str].remove(h)
-                data["creature_xp"] = max(0, data["creature_xp"] - 2)
-                save_data(data)
-                st.rerun()
+    # Habits Interface
+    h1, h2 = st.columns([4, 1])
+    with h1: new_h = st.text_input("", placeholder="Add a habit (e.g., Coding, Study)...", label_visibility="collapsed")
+    with h2: 
+        if st.button("Add", use_container_width=True) and new_h:
+            data["habits"].append(new_h); save_data(data); st.rerun()
 
-    with col_del:
-        if st.button("✕", key=f"del_{h}", help="Delete"):
-            data["habits"].remove(h)
-            if today_str in data["completions"] and h in data["completions"][today_str]:
-                data["completions"][today_str].remove(h)
-            save_data(data)
-            st.rerun()
+    # 3. HEATMAP / PROGRESS TRACKER (Powerful Task)
+    st.subheader("Your Progress")
+    completions = data["completions"].get(today_str, [])
+    for h in data["habits"]:
+        hc1, hc2 = st.columns([5, 1])
+        is_done = h in completions
+        with hc1:
+            if st.checkbox(h, value=is_done, key=h):
+                if h not in completions:
+                    data["completions"].setdefault(today_str, []).append(h)
+                    data["creature_xp"] += 2 #
+                save_data(data); st.rerun()
+        with hc2:
+            if st.button("✕", key=f"del_{h}"):
+                data["habits"].remove(h); save_data(data); st.rerun()
+
+with col_stats:
+    st.subheader("Analytics")
+    st.markdown(f"<div class='stat-pill'>🔥 Streak<br><b>{len(data['completions'])} Days</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-pill'>🏆 All Time XP<br><b>{data['creature_xp']} Points</b></div>", unsafe_allow_html=True)
+    
+    # Mini Heatmap logic
+    st.write("Weekly Activity")
+    days = [date.today() - timedelta(days=i) for i in range(7)]
+    for d in reversed(days):
+        d_str = str(d)
+        count = len(data["completions"].get(d_str, []))
+        color = ACCENT2 if count > 0 else BORDER
+        st.markdown(f"<div style='background:{color}; height:10px; border-radius:5px; margin:2px;'></div>", unsafe_allow_html=True)
