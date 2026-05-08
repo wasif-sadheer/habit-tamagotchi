@@ -4,7 +4,7 @@ import os
 import time
 from datetime import date, timedelta
 
-# ── PALETTE (EXACT) ──
+# ── PALETTE ──
 BG, CARD, CARD2, ACCENT, ACCENT2, TEXT, SUBTEXT, BORDER = (
     "#0f1117", "#1a1d27", "#21253a", "#7c6af7", "#56c596", "#e8eaf0", "#7b7f96", "#2a2d3e"
 )
@@ -23,7 +23,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ── DATA HANDLING ──
-DATA_FILE = "habit_pro_v2.json"
+DATA_FILE = "habit_pro_v3.json"
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE) as f: return json.load(f)
@@ -36,39 +36,40 @@ if 'data' not in st.session_state: st.session_state.data = load_data()
 data = st.session_state.data
 today_str = str(date.today())
 
-# ── SIDEBAR (TIMER FIX) ──
-with st.sidebar:
-    st.title("⚡ Study Tools")
-    st.subheader("⏱️ Focus Timer")
-    focus_mins = st.number_input("Set Minutes", 1, 120, 25)
-    
-    if st.button("Start Deep Work"):
-        st.session_state.timer_running = True
-        prog_bar = st.progress(0)
-        status_text = st.empty()
-        
-        for percent in range(100):
-            time.sleep((focus_mins * 60) / 100)
-            prog_bar.progress(percent + 1)
-            status_text.text(f"Focusing... {percent+1}%")
-        
-        st.success("Session Done! +5 XP")
-        data["creature_xp"] += 5
-        save_data(data)
-        st.session_state.timer_running = False
-        st.rerun()
-
 # ── MAIN DASHBOARD ──
 col_main, col_stats = st.columns([2, 1])
 
 with col_main:
     st.title("Habit Tamagotchi: Life OS")
     
-    # 1. Creature Card
+    # --- POWER TASK 1: LIVE FOCUS TIMER (Moved to Main for Stability) ---
+    with st.expander("⏱️ DEEP WORK TIMER (Live Countdown)", expanded=False):
+        t_col1, t_col2 = st.columns([1, 2])
+        with t_col1:
+            mins = st.number_input("Minutes", 1, 120, 25)
+            start_btn = st.button("Start Focus Session")
+        with t_col2:
+            timer_display = st.empty()
+            prog_display = st.empty()
+            
+            if start_btn:
+                total_seconds = mins * 60
+                for remaining in range(total_seconds, -1, -1):
+                    m, s = divmod(remaining, 60)
+                    timer_display.markdown(f"## ⏳ {m:02d}:{s:02d}")
+                    prog_display.progress(1.0 - (remaining / total_seconds))
+                    time.sleep(1)
+                
+                st.balloons()
+                data["creature_xp"] += 5
+                save_data(data)
+                st.success("Focus Session Done! +5 XP")
+                time.sleep(2)
+                st.rerun()
+
+    # --- Creature Card ---
     st.markdown('<div class="main-card">', unsafe_allow_html=True)
     c1, c2 = st.columns([1, 2])
-    
-    # Evolution Stage Logic
     xp = data["creature_xp"]
     if xp >= 100: stage, emoji = "Champion", "🏆"
     elif xp >= 60: stage, emoji = "Buddy", "🐶"
@@ -82,31 +83,30 @@ with col_main:
     with c2:
         st.write(f"**XP Progression:** {xp}/100")
         st.progress(min(xp/100, 1.0))
-        st.info("Tip: Multi-tasking generates bonus XP. Use the Matrix for high-priority tasks.")
+        st.write("Complete habits or focus sessions to evolve.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. PRIORITY MATRIX (The New Power Feature)
-    st.subheader("📌 University Priority Matrix")
+    # --- POWER TASK 2: PRIORITY MATRIX ---
+    st.subheader("📌 High-Priority Matrix")
     m_col1, m_col2 = st.columns(2)
     with m_col1:
-        new_task = st.text_input("Add High Priority Task (Urgent)")
+        new_task = st.text_input("New Urgent Task...")
         if st.button("Push to Matrix") and new_task:
             data["matrix"].append(new_task)
             save_data(data); st.rerun()
-    
     with m_col2:
         for t in data["matrix"]:
             st.markdown(f"<div class='matrix-card'>🔥 {t}</div>", unsafe_allow_html=True)
-            if st.button("Done", key=t):
+            if st.button("Done", key=f"mat_{t}"):
                 data["matrix"].remove(t)
                 data["creature_xp"] += 3
                 save_data(data); st.rerun()
 
-    # 3. HABITS
+    # --- POWER TASK 3: DAILY HABITS ---
     st.subheader("Daily Habits")
     h_input, h_add = st.columns([3, 1])
     with h_input:
-        new_h = st.text_input("New Habit...", label_visibility="collapsed")
+        new_h = st.text_input("New Habit...", label_visibility="collapsed", key="new_habit_input")
     with h_add:
         if st.button("Add Habit", use_container_width=True) and new_h:
             data["habits"].append(new_h); save_data(data); st.rerun()
@@ -120,18 +120,20 @@ with col_main:
                     data["completions"].setdefault(today_str, []).append(h)
                     data["creature_xp"] += 2
                     save_data(data); st.rerun()
+            elif h in completions:
+                data["completions"][today_str].remove(h)
+                data["creature_xp"] = max(0, data["creature_xp"] - 2)
+                save_data(data); st.rerun()
         with hc2:
             if st.button("✕", key=f"del_{h}"):
                 data["habits"].remove(h); save_data(data); st.rerun()
 
 with col_stats:
     st.subheader("Analytics")
-    st.markdown(f"<div class='stat-pill'>🔥 Daily Streak<br><b>{len(data['completions'])} Days</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-pill'>🔥 Streak<br><b>{len(data['completions'])} Days</b></div>", unsafe_allow_html=True)
     st.markdown(f"<div class='stat-pill'>⭐ Total XP<br><b>{data['creature_xp']}</b></div>", unsafe_allow_html=True)
-    
     st.write("---")
     st.write("📅 Weekly Activity")
-    # Heatmap logic
     for i in range(7):
         d = date.today() - timedelta(days=i)
         count = len(data["completions"].get(str(d), []))
