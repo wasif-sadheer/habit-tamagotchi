@@ -15,18 +15,21 @@ st.set_page_config(page_title="Habit Tamagotchi Life OS", layout="wide")
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {BG}; color: {TEXT}; }}
-    .main-card {{ background:{CARD}; border:1px solid {BORDER}; border-radius:20px; padding:20px; margin-bottom: 20px; }}
-    .stat-pill {{ background:{CARD2}; border-radius:12px; padding:10px; border:1px solid {BORDER}; text-align:center; }}
+    .main-card {{ background:{CARD}; border:1px solid {BORDER}; border-radius:20px; padding:25px; margin-bottom: 20px; text-align: center; }}
+    .stat-pill {{ background:{CARD2}; border-radius:12px; padding:15px; border:1px solid {BORDER}; text-align:center; }}
     .matrix-card {{ background:{CARD2}; border-left: 5px solid {ACCENT}; padding:10px; border-radius:10px; margin-bottom:10px; }}
-    .badge {{ background: linear-gradient(90deg, {ACCENT}, {ACCENT2}); color:white; padding:3px 12px; border-radius:10px; font-weight:bold; }}
+    .badge {{ background: linear-gradient(90deg, {ACCENT}, {ACCENT2}); color:white; padding:5px 15px; border-radius:12px; font-weight:bold; }}
+    .timer-text {{ font-size: 50px; font-weight: bold; color: {ACCENT2}; font-family: monospace; }}
     </style>
     """, unsafe_allow_html=True)
 
 # ── DATA HANDLING ──
-DATA_FILE = "habit_pro_v3.json"
+DATA_FILE = "habit_pro_v4.json"
 def load_data():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE) as f: return json.load(f)
+        try:
+            with open(DATA_FILE) as f: return json.load(f)
+        except: pass
     return {"habits": [], "completions": {}, "creature_xp": 0, "matrix": []}
 
 def save_data(d):
@@ -42,84 +45,99 @@ today_str = str(date.today())
 col_main, col_stats = st.columns([2, 1])
 
 with col_main:
-    st.title("Habit Tamagotchi: Life OS")
+    st.title("Habit Tamagotchi: Life OS 🚀")
     
-    # --- POWER TASK 1: LIVE FOCUS TIMER (CRASH-PROOF VERSION) ---
-    with st.expander("⏱️ DEEP WORK TIMER", expanded=True):
-        t_col1, t_col2 = st.columns([1, 2])
+    # --- POWER TASK 1: PRO TIMER (HOURS & MINS) + ACTIVITY SELECTION ---
+    with st.expander("🕒 PRO FOCUS SESSION (Deep Work, Meditation, Study)", expanded=True):
+        t_col1, t_col2 = st.columns([1, 1])
+        
         with t_col1:
-            mins = st.number_input("Minutes", 1, 120, 25, key="focus_mins")
+            activity = st.selectbox("Select Activity", ["📚 Studying", "🧘 Meditation", "💻 Coding", "🔋 Rest"])
+            h_timer = st.number_input("Hours", 0, 12, 0)
+            m_timer = st.number_input("Minutes", 0, 59, 25)
+            
             if not st.session_state.timer_active:
-                if st.button("🚀 Start Session"):
+                if st.button("🚀 Start Session", use_container_width=True):
                     st.session_state.timer_active = True
                     st.rerun()
             else:
-                if st.button("🛑 Stop / Reset"):
+                if st.button("🛑 Stop & Reset", use_container_width=True):
                     st.session_state.timer_active = False
                     st.rerun()
 
         with t_col2:
             timer_box = st.empty()
             if st.session_state.timer_active:
-                total_secs = mins * 60
-                # Is loop mein error handling dali hai taake black screen na aaye
-                try:
-                    for remaining in range(total_secs, -1, -1):
-                        m, s = divmod(remaining, 60)
-                        timer_box.markdown(f"<h2 style='color:{ACCENT2};'>⏳ {m:02d}:{s:02d}</h2>", unsafe_allow_html=True)
-                        time.sleep(1)
-                    
-                    # Agar timer pura ho jaye
+                total_secs = (h_timer * 3600) + (m_timer * 60)
+                if total_secs == 0:
+                    st.warning("Please set a time!")
                     st.session_state.timer_active = False
-                    data["creature_xp"] += 5
-                    save_data(data)
-                    st.balloons()
-                    st.success("Bravo! +5 XP Added.")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception:
-                    st.session_state.timer_active = False
+                else:
+                    try:
+                        # Activity Visual
+                        visual_emoji = "📖" if "Study" in activity else "🧘" if "Meditation" in activity else "👨‍💻" if "Coding" in activity else "😴"
+                        
+                        for remaining in range(total_secs, -1, -1):
+                            hrs, rem = divmod(remaining, 3600)
+                            mins, secs = divmod(rem, 60)
+                            timer_box.markdown(f"""
+                                <div style='text-align:center;'>
+                                    <div style='font-size:80px;'>{visual_emoji}</div>
+                                    <div class='timer-text'>{hrs:02d}:{mins:02d}:{secs:02d}</div>
+                                    <p style='color:{SUBTEXT};'>{activity} in progress...</p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            time.sleep(1)
+                        
+                        st.session_state.timer_active = False
+                        data["creature_xp"] += 10 if h_timer > 0 else 5 # Long sessions = More XP
+                        save_data(data)
+                        st.balloons()
+                        st.success(f"Session Complete! {activity} XP added.")
+                        time.sleep(2)
+                        st.rerun()
+                    except:
+                        st.session_state.timer_active = False
             else:
-                timer_box.info("Set time and press Start to begin focusing.")
+                timer_box.info("Choose your activity and time to start evolving.")
 
-    # --- Creature Card ---
+    # --- Creature Card (Evolution Logic) ---
     st.markdown('<div class="main-card">', unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 2])
     xp = data["creature_xp"]
+    #
     if xp >= 100: stage, emoji = "Champion", "🏆"
     elif xp >= 60: stage, emoji = "Buddy", "🐶"
     elif xp >= 30: stage, emoji = "Sprout", "🌱"
     elif xp >= 10: stage, emoji = "Hatchling", "🐣"
     else: stage, emoji = "Egg", "🥚"
     
-    with c1:
-        st.markdown(f"<h1 style='font-size:100px; text-align:center; margin:0;'>{emoji}</h1>", unsafe_allow_html=True)
-        st.markdown(f"<center><span class='badge'>{stage}</span></center>", unsafe_allow_html=True)
-    with c2:
-        st.write(f"**Total Experience (XP):** {xp}/100")
-        st.progress(min(xp/100, 1.0))
-        st.caption("Your pet evolves as you complete tasks.")
+    st.markdown(f"<div style='font-size:100px;'>{emoji}</div>", unsafe_allow_html=True)
+    st.markdown(f"<span class='badge'>{stage}</span>", unsafe_allow_html=True)
+    st.write(f"**XP Progress:** {xp}/100")
+    st.progress(min(xp/100, 1.0))
     st.markdown('</div>', unsafe_allow_html=True)
 
     # --- POWER TASK 2: PRIORITY MATRIX ---
-    st.subheader("📌 Urgent Priority Matrix")
-    m_col1, m_col2 = st.columns(2)
-    with m_col1:
-        new_task = st.text_input("Push a critical task...")
-        if st.button("Add to Matrix") and new_task:
+    st.subheader("📌 Urgent Matrix")
+    m_in, m_btn = st.columns([3, 1])
+    with m_in: new_task = st.text_input("Critical assignment or task...", key="matrix_in")
+    with m_btn: 
+        if st.button("Add Task", use_container_width=True) and new_task:
             data["matrix"].append(new_task); save_data(data); st.rerun()
-    with m_col2:
-        for t in data["matrix"]:
-            st.markdown(f"<div class='matrix-card'>🔥 {t}</div>", unsafe_allow_html=True)
-            if st.button("Mark Completed", key=f"mat_{t}"):
+    
+    for t in data["matrix"]:
+        mc1, mc2 = st.columns([5, 1])
+        with mc1: st.markdown(f"<div class='matrix-card'>⚡ {t}</div>", unsafe_allow_html=True)
+        with mc2: 
+            if st.button("Done", key=f"mat_{t}"):
                 data["matrix"].remove(t); data["creature_xp"] += 3; save_data(data); st.rerun()
 
     # --- POWER TASK 3: DAILY HABITS ---
     st.subheader("Daily Habits")
-    h1, h2 = st.columns([4, 1])
-    with h1: new_h = st.text_input("Habit name...", label_visibility="collapsed", key="h_input")
-    with h2:
-        if st.button("Add", use_container_width=True) and new_h:
+    h_in, h_add = st.columns([3, 1])
+    with h_in: new_h = st.text_input("New habit...", label_visibility="collapsed", key="h_in")
+    with h_add:
+        if st.button("Add", key="add_h_btn", use_container_width=True) and new_h:
             data["habits"].append(new_h); save_data(data); st.rerun()
             
     completions = data["completions"].get(today_str, [])
@@ -138,13 +156,16 @@ with col_main:
                 data["habits"].remove(h); save_data(data); st.rerun()
 
 with col_stats:
-    st.subheader("Performance")
+    st.subheader("Insights")
     st.markdown(f"<div class='stat-pill'>🔥 Daily Streak<br><b>{len(data['completions'])} Days</b></div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='stat-pill'>⭐ All-Time XP<br><b>{data['creature_xp']}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-pill'>⭐ Total XP<br><b>{data['creature_xp']}</b></div>", unsafe_allow_html=True)
     st.write("---")
-    st.write("📅 Activity Heatmap")
-    for i in range(7):
+    st.write("📅 GitHub-Style Heatmap")
+    # Heatmap visualization
+    cols = st.columns(7)
+    for i in range(21): # Last 3 weeks
         d = date.today() - timedelta(days=i)
-        count = len(data["completions"].get(str(d), []))
-        color = ACCENT2 if count > 0 else BORDER
-        st.markdown(f"<div style='background:{color}; height:14px; border-radius:4px; margin:4px; border:1px solid {BORDER}'></div>", unsafe_allow_html=True)
+        active = len(data["completions"].get(str(d), [])) > 0
+        color = ACCENT2 if active else BORDER
+        with cols[i % 7]:
+            st.markdown(f"<div style='background:{color}; height:20px; width:20px; border-radius:4px; margin:2px;'></div>", unsafe_allow_html=True)
